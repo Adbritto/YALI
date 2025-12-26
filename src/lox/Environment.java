@@ -3,7 +3,17 @@ package lox;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Environment {
+class Environment {
+	final Environment enclosing;
+
+	Environment() {
+		enclosing = null;
+	}
+
+	Environment(Environment enclosing) {
+		this.enclosing = enclosing;
+	}
+
 	private final Map<String, Object> values = new HashMap<>();
 
 	Object get(Token name) {
@@ -11,12 +21,19 @@ public class Environment {
 			return values.get(name.lexme);
 		}
 
+		if (enclosing != null) return enclosing.get(name);
+
 		throw new RuntimeError(name, "Undefined variable: '" + name.lexme + "'.");
 	}
 
 	public void assign(Token name, Object value) {
 		if (values.containsKey(name.lexme)) {
 			values.put(name.lexme, value);
+			return;
+		}
+
+		if (enclosing != null) {
+			enclosing.assign(name, value);
 			return;
 		}
 
