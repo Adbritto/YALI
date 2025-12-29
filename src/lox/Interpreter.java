@@ -22,6 +22,19 @@ public class Interpreter implements Expr.Visitor<Object>,
 	}
 
 	@Override
+	public Object visitLogicalExpr(Expr.Logical expr) {
+		Object left = evaluate(expr.left);
+
+		if (expr.operator.type == TokenType.OR) {
+			if (isTruthy(left)) return left;
+		} else {
+			if (!isTruthy(left)) return left;
+		}
+
+		return evaluate(expr.right);
+	}
+
+	@Override
 	public Object visitUnaryExpr(Expr.Unary expr) {
 		Object right = evaluate(expr.right);
 
@@ -115,6 +128,16 @@ public class Interpreter implements Expr.Visitor<Object>,
 	}
 
 	@Override
+	public Void visitIfStmt(Stmt.If stmt) {
+		if (isTruthy(evaluate(stmt.condition))) {
+			execute(stmt.thenBranch);
+		} else if (stmt.elseBranch != null) {
+			execute(stmt.elseBranch);
+		}
+		return null;
+	}
+
+	@Override
 	public Void visitPrintStmt(Stmt.Print stmt) {
 		Object value = evaluate(stmt.expression);
 		System.out.println(stringify(value));
@@ -133,6 +156,14 @@ public class Interpreter implements Expr.Visitor<Object>,
 	}
 
 	@Override
+	public Void visitWhileStmt(Stmt.While stmt) {
+		while (isTruthy(evaluate(stmt.condition))) {
+			execute(stmt.body);
+		}
+		return null;
+	}
+
+	@Override
 	public Object visitAssignExpr(Expr.Assign expr) {
 		Object value = evaluate(expr.value);
 		environment.assign(expr.name, value);
@@ -144,45 +175,50 @@ public class Interpreter implements Expr.Visitor<Object>,
 		Object left = evaluate(expr.left);
 		Object right = evaluate(expr.right);
 
-		switch (expr.operator.type) {
-			case MINUS:
+		return switch (expr.operator.type) {
+			case MINUS -> {
 				checkNumberOperand(expr.operator, left, right);
-				return (double) left - (double) right;
-			case SLASH:
+				yield  (double) left - (double) right;
+			}
+			case SLASH -> {
 				checkNumberOperand(expr.operator, left, right);
-				return (double) left / (double) right;
-			case STAR:
+				yield  (double) left / (double) right;
+			}
+			case STAR -> {
 				checkNumberOperand(expr.operator, left, right);
-				return (double) left * (double) right;
-			case PLUS:
+				yield  (double) left * (double) right;
+			}
+			case PLUS -> {
 				if (left instanceof Double && right instanceof Double) {
-					return (double) left + (double) right;
+					yield  (double) left + (double) right;
 				}
 
 				if (left instanceof String && right instanceof String) {
-					return (String) left + (String) right;
+					yield  (String) left + (String) right;
 				}
 
 				throw new RuntimeError(expr.operator,
 						"Operands must be two numbers or two strings.");
-			case GREATER:
+			}
+			case GREATER -> {
 				checkNumberOperand(expr.operator, left, right);
-				return (double) left > (double) right;
-			case GREATER_EQUAL:
+				yield  (double) left > (double) right;
+			}
+			case GREATER_EQUAL -> {
 				checkNumberOperand(expr.operator, left, right);
-				return (double) left >= (double) right;
-			case LESS:
+				yield  (double) left >= (double) right;
+			}
+			case LESS -> {
 				checkNumberOperand(expr.operator, left, right);
-				return (double) left < (double) right;
-			case LESS_EQUAL:
+				yield  (double) left < (double) right;
+			}
+			case LESS_EQUAL -> {
 				checkNumberOperand(expr.operator, left, right);
-				return (double) left <= (double) right;
-			case BANG_EQUAL:
-				return !isEqual(left, right);
-			case EQUAL_EQUAL:
-				return isEqual(left, right);
-			default:
-				return null;
-		}
+				yield  (double) left <= (double) right;
+			}
+			case BANG_EQUAL -> !isEqual(left, right);
+			case EQUAL_EQUAL -> isEqual(left, right);
+			default -> null;
+		};
 	}
 }
